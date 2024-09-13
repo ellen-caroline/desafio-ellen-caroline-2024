@@ -32,7 +32,6 @@ class RecintosZoo {
         }
 
         let infoAnimal;
-        let resultado;
 
         switch (animal) {
             case 'LEAO':
@@ -59,43 +58,64 @@ class RecintosZoo {
 
         const recintosViaveis = [];
 
+        // percorre pelos recintos
         this.recintos.forEach((recinto) => {
             let { tamanhoTotal, bioma, animais } = recinto;
             let carnivorosPresentes = Boolean;
             let espacoOcupado = Number;
             let outrasEspeciesPresentes = false;
-            let espacoDisponivel = Number;
-            let espacoAConsumir = Number;
 
-            // verifica se o animal pode ir no bioma
-            if (!infoAnimal.biomas.includes(bioma)) {
-                return; // pula esse recinto
-            }
-
-            // verifica se tem carnívoros no recinto
-            carnivorosPresentes = recinto.animais.reduce((acc, animal) => {
-                const { carnivoro } = animal;
-                if (carnivoro == true) {
-                    return acc + carnivoro;
+            // verifica o espaço ocupado pelos animais no recinto
+            animais.forEach(animalExistente => {
+                espacoOcupado += animalExistente.quantidade * animalExistente.tamanho;
+                if (['LEAO', 'LEOPARDO', 'CROCODILO'].includes(animalExistente.especie)) {
+                    carnivorosPresentes = true;
+                } else {
+                    outrasEspeciesPresentes = true;
                 }
-            }, 0)
+            });
 
-            // somar animais no recinto
-            espacoOcupado = recinto.animais.reduce((acc, animal) => {
-                const { quantidade, tamanho } = animal;
-                espacoOcupado = quantidade * tamanho;
-                return acc + espacoOcupado;
-            }, 0)
+            // verifica se tem espaço disponível para o novo animal
+            let espacoDisponivel = espacoOcupado - tamanhoTotal;
+            let espacoAConsumir = infoAnimal.tamanho * quantidadeAnimal;
 
-            espacoDisponivel = espacoOcupado - tamanhoTotal;
-            espacoAConsumir = infoAnimal.tamanho * quantidadeAnimal;
-
-            if (espacoDisponivel < espacoAConsumir) {
-                resultado = { recintosViaveis: null, erro: "Não há recinto viável" }
+            /************** regras de concivência **************/
+            // carnívoros não podem conviver com outras espécies
+            if (infoAnimal.carnivoro && outrasEspeciesPresentes) {
+                return; 
             }
-        })
-        return resultado;
-    }
+
+            // carnívoros só podem habitar com a própria espécie
+            if (infoAnimal.carnivoro) {
+                for (const { especie } of animais) {
+                    if (['LEAO', 'LEOPARDO', 'CROCODILO'].includes(especie) && especie !== animal) {
+                        return;
+                    }
+                }
+            }
+
+            // macacos precisam de pelo menos outro animal no recinto para se sentir confortável
+            if (infoAnimal.especie === 'MACACO' && animais.length === 0) {
+                return;
+            }
+
+            // se tem espécies distintas, considerar espaço adicional
+            if (animais.length > 0 && infoAnimal.carnivoro === false) {
+                espacoDisponivel -= 1;
+            }
+
+            // verifica se tem espaço disponível
+            if (espacoDisponivel >= espacoAConsumir) {
+                recintosViaveis.push(`Recinto ${numero} ("espaço livre: ${espacoDisponivel - espacoAConsumir} total: ${tamanhoTotal}")`);
+            }
+        });
+
+        if (recintosViaveis.length === 0) {
+            return { recintosViaveis: null, erro: "Não há recinto viável" };
+        }
+
+        return {recintosViaveis}};
 }
+
 
 export { RecintosZoo as RecintosZoo };
